@@ -1,0 +1,31 @@
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  // ✅ Enable React Strict Mode for better debugging
+  reactStrictMode: true,
+
+  // ✅ Optimize images and allow Imgur as a remote source
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "i.imgur.com", // Direct image links
+      },
+      {
+        protocol: "https",
+        hostname: "imgur.com", // Optional: album or other Imgur assets
+      },
+    ],
+  },
+
+  // ✅ (Optional) Experimental features or settings
+  experimental: {
+    optimizeCss: true,
+  },
+
+  // ✅ (Optional) If you deploy to a custom base path
+  // basePath: "",
+  // assetPrefix: "",
+};
+
+export default nextConfig;

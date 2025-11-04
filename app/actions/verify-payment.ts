@@ -1,0 +1,103 @@
+"use server"
+
+import { api } from "@/convex/_generated/api"
+import { ConvexHttpClient } from "convex/browser"
+import { sendTicketEmail } from "@/lib/send-ticket-email"
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+
+interface VerifyPaymentProps {
+  paymentId: string
+  eventId: string
+  userId?: string
+  quantity?: number
+  userEmail: string
+  userName: string
+  paystackReference: string
+}
+
+export async function verifyPaymentAndGenerateTicket({
+  paymentId,
+  eventId,
+  userId,
+  quantity,
+  userEmail,
+  userName,
+  paystackReference,
+}: VerifyPaymentProps) {
+  try {
+    console.log("[v0] Server action: verifying payment and generating ticket")
+
+    let finalUserId = userId
+    if (!finalUserId) {
+      try {
+        const payment = await convex.query(api.payments.getPayment, {
+          paymentId: paymentId as any,
+        })
+        finalUserId = payment?.userId
+        console.log("[v0] Retrieved userId from payment record:", finalUserId)
+      } catch (err) {
+        console.error("[v0] Failed to fetch payment:", err)
+      }
+    }
+
+    // Update payment status
+    await convex.mutation(api.payments.updatePaymentStatus, {
+      paymentId: paymentId as any,
+      status: "completed",
+      providerReference: paystackReference,
+    })
+
+    console.log("[v0] Payment status updated")
+
+    // Generate ticket
+    const ticketResult = await convex.mutation(api.tickets.generateTicket, {
+      paymentId: paymentId as any,
+      eventId: eventId as any,
+      userId: finalUserId as any,
+    })
+
+    console.log("[v0] Ticket generated:", ticketResult)
+
+    // Send email with ticket details
+    try {
+      const event = await convex.query(api.events.getById, { eventId: eventId as any })
+      const user = await convex.query(api.users.getById, { userId: finalUserId as any })
+
+      if (event && user && ticketResult) {
+        const eventDate = new Date(event.date).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+
+        await sendTicketEmail({
+          email: user.email || userEmail,
+          name: user.name || userName,
+          eventName: event.name,
+          eventDate,
+          eventVenue: event.venue,
+          ticketCode: ticketResult.ticketCode,
+          qrCodeUrl: ticketResult.qrCodeUrl,
+          ticketId: ticketResult.ticketId,
+        })
+
+        console.log("[v0] Ticket email sent successfully")
+      }
+    } catch (emailError) {
+      console.error("[v0] Failed to send ticket email:", emailError)
+      // Don't fail the payment if email fails
+    }
+
+    console.log("[v0] Payment verified successfully")
+    return {
+      success: true,
+      message: "Payment verified and ticket generated",
+      ticketId: ticketResult?.ticketId,
+    }
+  } catch (error) {
+    console.error("[v0] Payment verification error:", error)
+    throw error
+  }
+}
