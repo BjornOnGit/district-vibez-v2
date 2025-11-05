@@ -201,7 +201,7 @@ export default function CheckoutPage() {
                       </div>
                     </label>
 
-                    <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
+                    {/* <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -214,7 +214,7 @@ export default function CheckoutPage() {
                         <p className="font-semibold">ZendApt</p>
                         <p className="text-sm text-muted-foreground">Pay with USDT (crypto)</p>
                       </div>
-                    </label>
+                    </label> */}
                   </div>
                 </div>
 

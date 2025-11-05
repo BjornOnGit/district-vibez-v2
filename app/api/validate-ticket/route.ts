@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { ConvexHttpClient } from "convex/browser"
+import { fetchMutation, fetchQuery } from "convex/nextjs"
 import { api } from "@/convex/_generated/api"
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
@@ -18,10 +19,10 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Validating ticket with qrData:", qrData)
     console.log("[v0] Attempting query with:", { code: qrData.trim() })
 
-    const ticket = await convex.query(
+    const ticket = await fetchQuery(
       api.tickets.getTicketByCode,
       {
-        ticketCode: qrData.trim(),
+        ticketCode: qrData.trim()
       },
     )
     console.log("[v0] Ticket query response:", ticket)
@@ -56,12 +57,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if ticket is paid
-    if ((ticket.status as string) !== "paid") {
+    if ((ticket.status as string) !== "valid") {
       return NextResponse.json(
         {
           success: false,
-          message: "Ticket not paid",
-          tticket: {
+          message: "Ticket not valid",
+          ticket: {
             id: ticket._id,
             code: ticket.ticketCode,
             event_id: ticket.eventId,

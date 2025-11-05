@@ -21,8 +21,8 @@ export function Navbar() {
           <Link href="/about" className="hover:text-primary transition-colors">
             About Party
           </Link>
-          <Link href="/reservation" className="hover:text-primary transition-colors">
-            Reservation
+          <Link href="/events" className="hover:text-primary transition-colors">
+            Events
           </Link>
           <Link href="/contacts" className="hover:text-primary transition-colors">
             Contacts
@@ -30,7 +30,7 @@ export function Navbar() {
         </div>
 
         <Button asChild>
-          <Link href="/reservation">Reservation</Link>
+          <Link href="/events">Buy Tickets</Link>
         </Button>
       </div>
     </nav>
