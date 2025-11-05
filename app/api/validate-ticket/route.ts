@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { ConvexHttpClient } from "convex/browser"
-import type { FunctionReference } from "convex"
+import { api } from "@/convex/_generated/api"
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
