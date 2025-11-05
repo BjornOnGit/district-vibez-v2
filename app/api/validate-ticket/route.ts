@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Attempting query with:", { code: qrData.trim() })
 
     const ticket = await convex.query(
-      "tickets:getTicketByCode" as unknown as FunctionReference<"query">,
+      api.tickets.getTicketByCode,
       {
         ticketCode: qrData.trim(),
       },
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     await convex.mutation(
-      "tickets:markTicketAsUsed" as unknown as FunctionReference<"mutation">,
+      api.tickets.markTicketAsUsed,
       {
         ticketId: ticket._id,
       },
