@@ -64,3 +64,33 @@ export const getUserTickets = query({
       .collect()
   },
 })
+
+
+export const markTicketAsUsed = mutation({
+  args: {
+    ticketId: v.id("tickets"),
+  },
+  async handler(ctx, args) {
+    const ticket = await ctx.db.get(args.ticketId)
+    if (!ticket) throw new Error("Ticket not found")
+
+    if (ticket.status === "used") {
+      throw new Error("Ticket already marked as used")
+    }
+
+    await ctx.db.patch(args.ticketId, {
+      status: "used",
+      scannedAt: Date.now(),
+    })
+
+    await ctx.db.insert("audit_logs", {
+      action: "ticket_scanned",
+      entityType: "ticket",
+      entityId: args.ticketId,
+      userId: ticket.userId,
+      timestamp: Date.now(),
+    })
+
+    return { success: true, message: "Ticket marked as used" }
+  },
+})

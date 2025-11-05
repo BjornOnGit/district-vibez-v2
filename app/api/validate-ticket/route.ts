@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if ticket is already used
-    if (ticket.status === "used") {
+    if ((ticket.status as string) === "used") {
       return NextResponse.json(
         {
           success: false,
@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
           ticket: {
             id: ticket._id,
             code: ticket.ticketCode,
-            event_title: ticket.event?.title || "Unknown Event",
-            ticket_type: ticket.ticket_type,
-            user_name: ticket.user?.name || "Guest",
-            user_email: ticket.user?.email || "N/A",
+            event_id: ticket.eventId,
+            payment_id: ticket.paymentId,
+            user_id: ticket.userId,
+            qrCodeUrl: ticket.qrCodeUrl,
             status: ticket.status,
             created_at: new Date(ticket._creationTime).toISOString(),
           },
@@ -56,18 +56,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if ticket is paid
-    if (ticket.status !== "paid") {
+    if ((ticket.status as string) !== "paid") {
       return NextResponse.json(
         {
           success: false,
           message: "Ticket not paid",
-          ticket: {
+          tticket: {
             id: ticket._id,
             code: ticket.ticketCode,
-            event_title: ticket.event?.title || "Unknown Event",
-            ticket_type: ticket.ticket_type,
-            user_name: ticket.user?.name || "Guest",
-            user_email: ticket.user?.email || "N/A",
+            event_id: ticket.eventId,
+            payment_id: ticket.paymentId,
+            user_id: ticket.userId,
+            qrCodeUrl: ticket.qrCodeUrl,
             status: ticket.status,
             created_at: new Date(ticket._creationTime).toISOString(),
           },
@@ -88,15 +88,15 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "Ticket validated successfully",
       ticket: {
-        id: ticket._id,
-        code: ticket.ticketCode,
-        event_title: ticket.event?.title || "Unknown Event",
-        ticket_type: ticket.ticket_type,
-        user_name: ticket.user?.name || "Guest",
-        user_email: ticket.user?.email || "N/A",
-        status: "used",
-        created_at: new Date(ticket._creationTime).toISOString(),
-      },
+            id: ticket._id,
+            code: ticket.ticketCode,
+            event_id: ticket.eventId,
+            payment_id: ticket.paymentId,
+            user_id: ticket.userId,
+            qrCodeUrl: ticket.qrCodeUrl,
+            status: ticket.status,
+            created_at: new Date(ticket._creationTime).toISOString(),
+          },
     })
   } catch (error) {
     console.error("[v0] Validation error details:", error)
