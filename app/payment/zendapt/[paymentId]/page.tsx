@@ -31,9 +31,9 @@ export default function ZendAptPaymentPage() {
             payment: {
               _id: payment._id,
               amount: payment.amount,
-              userEmail: payment.userEmail,
-              userName: payment.userName,
-              quantity: payment.quantity,
+              userEmail: payment.metadata?.userEmail,
+              userName: payment.metadata?.userName,
+              quantity: payment.metadata?.quantity,
             },
             event: {
               _id: event._id,
