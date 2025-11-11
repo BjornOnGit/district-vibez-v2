@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useMutation, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Card } from "@/components/ui/card"
@@ -56,6 +56,21 @@ export default function CheckoutPage() {
 
   const totalPrice = event.ticketPrice * formData.quantity
 
+  // Read selected ticket type from query params
+  const searchParams = useSearchParams()
+  const selectedTicketType = searchParams?.get("ticketType") || null
+
+  // Determine selected unit price (prefer ticketPricing entry matching selectedTicketType)
+  let selectedUnitPrice = event.ticketPrice
+  if (selectedTicketType && event.ticketPricing) {
+    const match = event.ticketPricing.find((tp: any) => tp.type === selectedTicketType)
+    if (match) selectedUnitPrice = match.price ?? (match.price_cents ? match.price_cents / 100 : selectedUnitPrice)
+  }
+
+  const SERVICE_CHARGE = 300
+  const subtotal = selectedUnitPrice * formData.quantity
+  const totalWithService = subtotal + SERVICE_CHARGE
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
@@ -85,17 +100,58 @@ export default function CheckoutPage() {
         phone: formData.phone,
         quantity: formData.quantity,
         paymentMethod: formData.paymentMethod,
+        ticketType: selectedTicketType || undefined,
+        ticketPrice: selectedUnitPrice,
       })
 
-      // Store payment ID in session storage for payment gateway redirect
+      // Store payment metadata in session for the embed page
       sessionStorage.setItem("paymentId", payment.paymentId)
       sessionStorage.setItem("paymentMethod", formData.paymentMethod)
 
-      // Redirect to payment gateway (will be implemented in Task 5 & 6)
+      // Initialize provider-specific payment and get back a hosted payment URL + reference
       if (formData.paymentMethod === "paystack") {
-        router.push(`/payment/paystack/${payment.paymentId}`)
+        const initResp = await fetch(`/api/payments/paystack/initialize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentId: payment.paymentId, payment, event, amount: totalWithService }),
+        })
+        const initData = await initResp.json()
+        if (!initResp.ok) throw new Error(initData.error || "Failed to initialize Paystack payment")
+
+        // Save the hosted URL for embedding and navigate to an intermediate page
+        const key = `embed_payment_url_paystack_${initData.reference}`
+        sessionStorage.setItem(key, initData.authorizationUrl)
+        router.push(`/payment/embed/paystack/${initData.reference}`)
       } else {
-        router.push(`/payment/zendapt/${payment.paymentId}`)
+        // Zendapt expects amount_cents, currency, user details and tickets
+        const tickets = [
+          {
+            type: selectedTicketType || "regular",
+            quantity: formData.quantity,
+            recipient_email: formData.email,
+          },
+        ]
+
+        const zendaptBody = {
+          amount_cents: Math.round(totalWithService * 100),
+          currency: "NGN",
+          user_email: formData.email,
+          user_name: formData.name,
+          event_id: eventId,
+          tickets,
+        }
+
+        const zendaptResp = await fetch(`/api/payments/zendapt/initialize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(zendaptBody),
+        })
+        const zendaptData = await zendaptResp.json()
+        if (!zendaptResp.ok) throw new Error(zendaptData.error || "Failed to create Zendapt payment link")
+
+        const key = `embed_payment_url_zendapt_${zendaptData.reference || zendaptData.reference}`
+        sessionStorage.setItem(key, zendaptData.paymentUrl)
+        router.push(`/payment/embed/zendapt/${zendaptData.reference}`)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
@@ -171,6 +227,7 @@ export default function CheckoutPage() {
                       name="quantity"
                       value={formData.quantity}
                       onChange={handleInputChange}
+                      aria-label="quantity"
                       className="w-full px-4 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       {Array.from({ length: Math.min(10, event.availableTickets) }, (_, i) => i + 1).map((num) => (
@@ -201,7 +258,7 @@ export default function CheckoutPage() {
                       </div>
                     </label>
 
-                    {/* <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
+                    <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -214,7 +271,7 @@ export default function CheckoutPage() {
                         <p className="font-semibold">ZendApt</p>
                         <p className="text-sm text-muted-foreground">Pay with USDT (crypto)</p>
                       </div>
-                    </label> */}
+                    </label>
                   </div>
                 </div>
 
@@ -237,20 +294,22 @@ export default function CheckoutPage() {
                   <p className="text-sm text-muted-foreground">{event.name}</p>
                   <p className="font-semibold">{event.venue}</p>
                 </div>
-
                 <div className="border-t pt-4">
                   <div className="flex justify-between mb-2">
-                    <span className="text-muted-foreground">
-                      ₦{event.ticketPrice.toLocaleString()} × {formData.quantity}
-                    </span>
-                    <span className="font-semibold">₦{(event.ticketPrice * formData.quantity).toLocaleString()}</span>
+                    <span className="text-muted-foreground">₦{selectedUnitPrice.toLocaleString()} × {formData.quantity}</span>
+                    <span className="font-semibold">₦{(subtotal).toLocaleString()}</span>
+                  </div>
+
+                  <div className="flex justify-between mb-2">
+                    <span className="text-muted-foreground">Service charge</span>
+                    <span className="font-semibold">₦{SERVICE_CHARGE.toLocaleString()}</span>
                   </div>
                 </div>
 
                 <div className="border-t pt-4">
                   <div className="flex justify-between">
                     <span className="font-semibold">Total</span>
-                    <span className="text-2xl font-bold">₦{totalPrice.toLocaleString()}</span>
+                    <span className="text-2xl font-bold">₦{totalWithService.toLocaleString()}</span>
                   </div>
                 </div>
               </div>

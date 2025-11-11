@@ -101,11 +101,34 @@ export default function EventDetailPage() {
           <div>
             <Card className="p-6 sticky top-8">
               <div className="mb-6">
-                <p className="text-sm text-muted-foreground mb-2">Ticket Price</p>
-                <p className="text-4xl font-bold">₦{event.ticketPrice.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground mb-2">Ticket Options</p>
+                {event.ticketPricing && event.ticketPricing.length > 0 ? (
+                  <div className="space-y-3 mb-4">
+                    {event.ticketPricing.map((tp: any) => {
+                      const priceNumber = tp.price ?? (tp.price_cents ? tp.price_cents / 100 : event.ticketPrice)
+                      return (
+                        <div
+                          key={tp.type}
+                          className="flex items-center justify-between border border-input rounded-lg p-3"
+                        >
+                          <div>
+                            <div className="font-semibold capitalize">{tp.type} Ticket</div>
+                            <div className="text-lg font-bold text-primary">₦{priceNumber.toLocaleString()}</div>
+                          </div>
+
+                          <Link href={`/checkout/${event._id}?ticketType=${encodeURIComponent(tp.type)}`}>
+                            <Button size="sm">Buy</Button>
+                          </Link>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-4xl font-bold">₦{event.ticketPrice.toLocaleString()}</p>
+                )}
               </div>
 
-              <div className="bg-muted p-4 rounded-lg mb-6">
+              {/* <div className="bg-muted p-4 rounded-lg mb-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Ticket className="h-5 w-5" />
                   <span className="font-semibold">Availability</span>
@@ -114,9 +137,9 @@ export default function EventDetailPage() {
                   {event.availableTickets} / {event.totalTickets}
                 </p>
                 <p className="text-sm text-muted-foreground">tickets available</p>
-              </div>
+              </div> */}
 
-              {isSoldOut ? (
+              {/* {isSoldOut ? (
                 <Button disabled className="w-full" size="lg">
                   Sold Out
                 </Button>
@@ -126,7 +149,7 @@ export default function EventDetailPage() {
                     Get Tickets
                   </Button>
                 </Link>
-              )}
+              )} */}
 
               {event.availableTickets < 50 && event.availableTickets > 0 && (
                 <p className="text-sm text-orange-600 mt-4 text-center font-semibold">

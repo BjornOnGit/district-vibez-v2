@@ -3,9 +3,10 @@ import { v } from "convex/values"
 
 export const generateTicket = mutation({
   args: {
-    paymentId: v.id("payments"),
-    eventId: v.id("events"),
+    paymentId: v.optional(v.id("payments")),
+    eventId: v.optional(v.id("events")),
     userId: v.id("users"),
+    ticketType: v.optional(v.string()),
   },
   async handler(ctx, args) {
     // Generate unique ticket code
@@ -15,21 +16,26 @@ export const generateTicket = mutation({
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(ticketCode)}`
 
     // Create ticket record
-    const ticketId = await ctx.db.insert("tickets", {
+    const ticketData: any = {
       eventId: args.eventId,
       userId: args.userId,
-      paymentId: args.paymentId,
       ticketCode,
+      ticketType: args.ticketType ?? "regular",
       qrCodeUrl,
       status: "valid",
-    })
+    }
+    if (args.paymentId) ticketData.paymentId = args.paymentId
 
-    // Update event available tickets
-    const event = await ctx.db.get(args.eventId)
-    if (event) {
-      await ctx.db.patch(args.eventId, {
-        availableTickets: Math.max(0, event.availableTickets - 1),
-      })
+    const ticketId = await ctx.db.insert("tickets", ticketData)
+
+    // Update event available tickets if eventId was provided and event exists
+    if (args.eventId) {
+      const event = await ctx.db.get(args.eventId)
+      if (event) {
+        await ctx.db.patch(args.eventId, {
+          availableTickets: Math.max(0, event.availableTickets - 1),
+        })
+      }
     }
 
     // Log audit event

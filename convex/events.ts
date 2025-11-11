@@ -50,6 +50,7 @@ export const create = mutation({
     totalTickets: v.number(),
     availableTickets: v.number(),
     status: v.union(v.literal("active"), v.literal("sold_out"), v.literal("cancelled")),
+    ticketPricing: v.optional(v.any()),
     imageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -62,6 +63,7 @@ export const create = mutation({
       totalTickets: args.totalTickets,
       availableTickets: args.availableTickets,
       status: args.status,
+      ticketPricing: args.ticketPricing,
       imageUrl: args.imageUrl,
     })
 
@@ -80,6 +82,7 @@ export const update = mutation({
     totalTickets: v.optional(v.number()),
     availableTickets: v.optional(v.number()),
     status: v.optional(v.union(v.literal("active"), v.literal("sold_out"), v.literal("cancelled"))),
+    ticketPricing: v.optional(v.any()),
     imageUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

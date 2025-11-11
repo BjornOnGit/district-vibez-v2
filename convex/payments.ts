@@ -9,6 +9,8 @@ export const createPayment = mutation({
     phone: v.optional(v.string()),
     quantity: v.number(),
     paymentMethod: v.union(v.literal("paystack"), v.literal("zendapt")),
+    ticketType: v.optional(v.string()),
+    ticketPrice: v.optional(v.number()),
   },
   async handler(ctx, args) {
     // Find or create user
@@ -29,7 +31,9 @@ export const createPayment = mutation({
     const event = await ctx.db.get(args.eventId)
     if (!event) throw new Error("Event not found")
 
-    const totalAmount = event.ticketPrice * args.quantity
+  // Determine unit price: prefer provided ticketPrice (from checkout) else event value
+  const unitPrice = args.ticketPrice ?? event.ticketPrice
+  const totalAmount = unitPrice * args.quantity
 
     // Create payment record
     const paymentId = await ctx.db.insert("payments", {
@@ -44,6 +48,8 @@ export const createPayment = mutation({
         quantity: args.quantity,
         userEmail: args.email,
         userName: args.name,
+        ticketType: args.ticketType,
+        unitPrice,
       },
     })
 
@@ -58,7 +64,7 @@ export const createPayment = mutation({
 
 export const updatePaymentStatus = mutation({
   args: {
-    paymentId: v.id("payments"),
+    paymentId: v.optional(v.id("payments")),
     status: v.union(
       v.literal("pending"),
       v.literal("processing"),
@@ -66,13 +72,36 @@ export const updatePaymentStatus = mutation({
       v.literal("failed"),
       v.literal("refunded"),
     ),
-    providerReference: v.string(),
+    providerReference: v.optional(v.string()),
   },
   async handler(ctx, args) {
-    await ctx.db.patch(args.paymentId, {
-      status: args.status,
-      providerReference: args.providerReference,
-    })
+    // Allow updating by either internal paymentId or providerReference (fallback).
+    if (args.paymentId) {
+      await ctx.db.patch(args.paymentId, {
+        status: args.status,
+        ...(args.providerReference ? { providerReference: args.providerReference } : {}),
+      })
+      return
+    }
+
+    if (args.providerReference) {
+      const found = await ctx.db
+        .query("payments")
+        .withIndex("by_provider_reference", (q) => q.eq("providerReference", args.providerReference!))
+        .first()
+      if (found?._id) {
+        await ctx.db.patch(found._id, {
+          status: args.status,
+          providerReference: args.providerReference,
+        })
+        return
+      }
+    }
+
+    // If neither identifier is provided, log and return silently to allow downstream
+    // processes (like ticket generation) to continue without blocking.
+    console.warn("[v0] updatePaymentStatus called without paymentId or providerReference; skipping update")
+    return
   },
 })
 
@@ -80,5 +109,15 @@ export const getPayment = query({
   args: { paymentId: v.id("payments") },
   async handler(ctx, args) {
     return await ctx.db.get(args.paymentId)
+  },
+})
+
+export const getPaymentByProviderReference = query({
+  args: { providerReference: v.string() },
+  async handler(ctx, args) {
+    return await ctx.db
+      .query("payments")
+      .withIndex("by_provider_reference", (q) => q.eq("providerReference", args.providerReference!))
+      .first()
   },
 })

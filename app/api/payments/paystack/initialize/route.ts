@@ -1,6 +1,6 @@
 export async function POST(request: Request) {
   try {
-    const { paymentId, payment, event } = await request.json()
+  const { paymentId, payment, event, amount } = await request.json()
 
     if (!paymentId || !payment || !event) {
       return Response.json({ error: "Missing required data" }, { status: 400 })
@@ -10,6 +10,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Payment already processed" }, { status: 400 })
     }
 
+    // Ensure we include identifying metadata so the verify webhook can rely on it
     const paystackResponse = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: {
@@ -18,12 +19,20 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         email: payment.metadata.userEmail,
-        amount: payment.amount * 100, // Paystack expects amount in kobo (cents)
+        // Allow overriding the amount (in Naira) from the client. If not provided, use stored payment.amount.
+        amount: (typeof amount === "number" ? amount : payment.amount) * 100, // Paystack expects amount in kobo (cents)
+        // Include useful metadata so verification callback doesn't need an extra DB lookup
         metadata: {
           paymentId,
           eventId: payment.eventId,
-          quantity: payment.metadata.quantity,
+          quantity: payment.metadata?.quantity,
           eventName: event.name,
+          // Include user and ticket info from the payment record
+          userId: payment.userId,
+          userEmail: payment.metadata?.userEmail,
+          userName: payment.metadata?.userName,
+          ticketType: payment.metadata?.ticketType,
+          unitPrice: payment.metadata?.unitPrice ?? payment.metadata?.ticketPrice,
         },
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/payment/paystack/callback?paymentId=${paymentId}`,
       }),

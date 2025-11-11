@@ -10,7 +10,9 @@ export default defineSchema({
     ticketPrice: v.number(),
     totalTickets: v.number(),
     availableTickets: v.number(),
-    imageUrl: v.optional(v.string()),
+  imageUrl: v.optional(v.string()),
+  // ticketPricing: array of objects { type: string, price: number, currency?: string }
+  ticketPricing: v.optional(v.any()),
     status: v.union(v.literal("active"), v.literal("sold_out"), v.literal("cancelled")),
   }).index("by_date", ["date"]),
 
@@ -21,11 +23,12 @@ export default defineSchema({
   }).index("by_email", ["email"]),
 
   tickets: defineTable({
-    eventId: v.id("events"),
+    eventId: v.optional(v.id("events")),
     userId: v.id("users"),
-    paymentId: v.id("payments"),
+    paymentId: v.optional(v.id("payments")),
     ticketCode: v.string(), // Unique QR code identifier
     qrCodeUrl: v.string(),
+    ticketType: v.string() ?? "regular",
     pdfUrl: v.optional(v.string()),
     status: v.union(v.literal("valid"), v.literal("used"), v.literal("cancelled")),
     scannedAt: v.optional(v.number()), // Timestamp

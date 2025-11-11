@@ -1,96 +1,146 @@
 "use client"
 
-import { useQuery } from "convex/react"
-import { api } from "@/convex/_generated/api"
-import { Card } from "../../components/ui/card"
-import { Button } from "../../components/ui/button"
-import Link from "next/link"
-import Image from "next/image"
-import { Calendar, MapPin } from "lucide-react"
+import { useConvex } from "convex/react"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Spinner } from "@/components/ui/spinner"
+import { Calendar, MapPin, Ticket } from "lucide-react"
 
-export default function EventsPage() {
-  const events = useQuery(api.events.list)
+type TicketType = {
+  type: string
+  price?: number
+  price_cents?: number
+  currency?: string
+  perks?: string[]
+}
 
-  if (events === undefined) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading events...</p>
-        </div>
-      </div>
-    )
+type Event = {
+  _id: string
+  name: string
+  description?: string
+  venue?: string
+  date?: string
+  imageUrl?: string
+  ticketPricing?: TicketType[]
+  status: "active" | "sold_out" | "cancelled"
+}
+
+export default function HomePage() {
+  const convex = useConvex()
+  const router = useRouter()
+  const [events, setEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const activeEvents = await convex.query("events:list" as any)
+        setEvents(activeEvents || [])
+      } catch (err) {
+        console.error("[v0] Error loading events:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadEvents()
+  }, [convex])
+
+  const handleBuyTicket = (eventId: string, ticketType: string) => {
+    router.push(`/events/${eventId}/checkout?ticketType=${ticketType}`)
   }
 
-  if (events.length === 0) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-xl text-muted-foreground">No events available</p>
-        </div>
+      <div className="min-h-screen bg-background flex justify-center items-center">
+        <Spinner size="lg" />
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12">
+      {/* Header */}
+      {/* <header className="border-b border-border bg-card sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-8 py-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-foreground">Event Ticketing</h1>
+            <Button variant="outline" onClick={() => router.push("/admin/events")} className="hidden md:inline-flex">
+              Admin
+            </Button>
+          </div>
+        </div>
+      </header> */}
+
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-8 py-12">
         <div className="mb-12">
-          <h1 className="text-4xl font-bold mb-2">Upcoming Events</h1>
-          <p className="text-muted-foreground">Discover and book tickets for the hottest parties</p>
+          <h2 className="text-4xl font-bold text-foreground mb-2">Upcoming Events</h2>
+          <p className="text-lg text-muted-foreground">Choose your preferred ticket type and secure your spot</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event) => (
-            <Link key={event._id} href={`/events/${event._id}`}>
-              <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-                <div className="relative h-48 w-full">
-                  <Image
-                    src={event.imageUrl || "/placeholder.svg?height=200&width=400"}
-                    alt={event.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold mb-3">{event.name}</h3>
+        {events.length === 0 ? (
+          <Card className="p-12 text-center">
+            <p className="text-muted-foreground text-lg">No events available at this time</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {events.map((event) => (
+              <Card key={event._id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                {/* Event Image */}
+                {event.imageUrl ? (
+                  <div className="w-full h-48 bg-muted overflow-hidden">
+                    <img src={event.imageUrl} alt={event.name} className="w-full h-full object-cover" />
+                  </div>
+                ) : null}
 
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {new Date(event.date).toLocaleDateString("en-US", {
-                          weekday: "short",
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
+                <div className="p-6 space-y-4">
+                  {/* Event Title */}
+                  <div>
+                    <h3 className="text-2xl font-bold text-foreground mb-2">{event.name}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
+                  </div>
+
+                  {/* Event Info */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="w-4 h-4" />
+                      <span className="text-sm">
+                        {event.date
+                          ? new Date(event.date).toLocaleDateString("en-US", {
+                              weekday: "short",
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : ""}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>{event.venue}</span>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      <span className="text-sm">{event.venue}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">From</p>
-                      <p className="text-lg font-bold">₦{event.ticketPrice.toLocaleString()}</p>
-                    </div>
-                    <Button>Get Tickets</Button>
+                  <div className="border-t border-border pt-4">
+                    <Button onClick={() => router.push(`/events/${event._id}`)} className="w-full mt-2">
+                      See details
+                    </Button>
                   </div>
-
-                  {event.availableTickets < 50 && event.availableTickets > 0 && (
-                    <p className="text-sm text-orange-600 mt-3">Only {event.availableTickets} tickets left!</p>
-                  )}
-                  {event.availableTickets === 0 && <p className="text-sm text-red-600 mt-3 font-semibold">Sold Out</p>}
                 </div>
               </Card>
-            </Link>
-          ))}
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card mt-12">
+        <div className="max-w-6xl mx-auto px-8 py-8 text-center">
+          <p className="text-sm text-muted-foreground">© 2025 Event Ticketing Platform. All rights reserved.</p>
         </div>
-      </div>
+      </footer>
     </div>
   )
 }

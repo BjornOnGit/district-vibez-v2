@@ -10,7 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
-import { AlertCircle, ArrowLeft } from "lucide-react"
+import { AlertCircle, ArrowLeft, Plus, X } from "lucide-react"
+
+type TicketType = {
+  type: string
+  price: number
+  currency?: string
+}
 
 type EventFormProps = {
   eventId?: string
@@ -23,7 +29,6 @@ export default function EventForm({ eventId, isEditing }: EventFormProps) {
   const [loading, setLoading] = useState(isEditing)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -32,8 +37,9 @@ export default function EventForm({ eventId, isEditing }: EventFormProps) {
     ticketPrice: 0,
     totalTickets: 0,
     availableTickets: 0,
-    status: "active" as const,
+    ticketPricing: [] as TicketType[],
     imageUrl: "",
+    status: "active" as "active" | "sold_out" | "cancelled",
   })
 
   useEffect(() => {
@@ -41,18 +47,19 @@ export default function EventForm({ eventId, isEditing }: EventFormProps) {
       const fetchEvent = async () => {
         try {
           setLoading(true)
-          const event = await convex.query("events:getEvent" as any, { id: eventId })
+          const event = await convex.query("events:getById" as any, { eventId })
           if (event) {
             setFormData({
-              name: event.name,
-              description: event.description,
-              date: event.date,
-              venue: event.venue,
-              ticketPrice: event.ticketPrice,
-              totalTickets: event.totalTickets,
-              availableTickets: event.availableTickets,
-              status: event.status,
+              name: event.name || "",
+              description: event.description || "",
+              date: event.date ? new Date(event.date).toISOString().split("T")[0] : "",
+              venue: event.venue || "",
+              ticketPrice: event.ticketPrice || 0,
+              totalTickets: event.totalTickets || 0,
+              availableTickets: event.availableTickets || event.totalTickets || 0,
+              ticketPricing: event.ticketPricing || [],
               imageUrl: event.imageUrl || "",
+              status: event.status || "active",
             })
           }
         } catch (err) {
@@ -70,16 +77,37 @@ export default function EventForm({ eventId, isEditing }: EventFormProps) {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]: name.includes("Price") || name.includes("Tickets") ? Number(value) : value,
+      [name]: name === "totalTickets" || name === "availableTickets" || name === "ticketPrice" ? Number(value) : value,
     }))
+  }
+
+  const handleTicketPricingChange = (index: number, field: keyof TicketType, value: any) => {
+    const updated = [...formData.ticketPricing]
+    const current = { ...(updated[index] || { type: "", price: 0 }) }
+    if (field === "price") {
+      current.price = Number(value)
+    } else {
+      // @ts-ignore
+      current[field] = value
+    }
+    updated[index] = current
+    setFormData((prev) => ({ ...prev, ticketPricing: updated }))
+  }
+
+  const addTicketType = () => {
+    setFormData((prev) => ({ ...prev, ticketPricing: [...prev.ticketPricing, { type: "", price: 0 }] }))
+  }
+
+  const removeTicketType = (index: number) => {
+    setFormData((prev) => ({ ...prev, ticketPricing: prev.ticketPricing.filter((_, i) => i !== index) }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
-    if (!formData.name || !formData.venue || !formData.date) {
-      setError("Please fill in all required fields")
+    if (!formData.name || !formData.description || !formData.venue || !formData.date) {
+      setError("Please fill in all required fields (Name, Description, Venue, Date)")
       return
     }
 
@@ -87,9 +115,32 @@ export default function EventForm({ eventId, isEditing }: EventFormProps) {
       setSaving(true)
 
       if (isEditing && eventId) {
-        await convex.mutation("events:update" as any, { id: eventId, ...formData })
+        await convex.mutation("events:update" as any, {
+          id: eventId,
+          name: formData.name,
+          description: formData.description,
+          date: formData.date,
+          venue: formData.venue,
+          ticketPrice: formData.ticketPrice,
+          totalTickets: formData.totalTickets,
+          availableTickets: formData.availableTickets,
+          status: formData.status,
+          ticketPricing: formData.ticketPricing,
+          imageUrl: formData.imageUrl || undefined,
+        })
       } else {
-        await convex.mutation("events:create" as any, formData)
+        await convex.mutation("events:create" as any, {
+          name: formData.name,
+          description: formData.description,
+          date: formData.date,
+          venue: formData.venue,
+          ticketPrice: formData.ticketPrice,
+          totalTickets: formData.totalTickets,
+          availableTickets: formData.availableTickets || formData.totalTickets,
+          status: formData.status,
+          ticketPricing: formData.ticketPricing,
+          imageUrl: formData.imageUrl || undefined,
+        })
       }
 
       router.push("/admin/events")
@@ -110,7 +161,6 @@ export default function EventForm({ eventId, isEditing }: EventFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Error Alert */}
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -118,7 +168,7 @@ export default function EventForm({ eventId, isEditing }: EventFormProps) {
         </Alert>
       )}
 
-      {/* Basic Info */}
+      {/* Event Details */}
       <Card className="p-6">
         <h2 className="text-lg font-semibold mb-4 text-foreground">Event Details</h2>
         <div className="space-y-4">
@@ -135,13 +185,14 @@ export default function EventForm({ eventId, isEditing }: EventFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Description</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Description *</label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleInputChange}
               placeholder="Event description"
               rows={4}
+              required
               className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
@@ -158,22 +209,18 @@ export default function EventForm({ eventId, isEditing }: EventFormProps) {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Date *</label>
-            <Input type="date" name="date" value={formData.date} onChange={handleInputChange} required />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Date *</label>
+              <Input type="date" name="date" value={formData.date} onChange={handleInputChange} required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Image URL</label>
+              <Input type="text" name="imageUrl" value={formData.imageUrl} onChange={handleInputChange} />
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Ticket Price</label>
-              <Input
-                type="number"
-                name="ticketPrice"
-                value={formData.ticketPrice}
-                onChange={handleInputChange}
-                placeholder="0"
-              />
-            </div>
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Total Tickets</label>
               <Input
@@ -202,24 +249,47 @@ export default function EventForm({ eventId, isEditing }: EventFormProps) {
               name="status"
               value={formData.status}
               onChange={handleInputChange}
+              aria-label="status"
               className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="active">Active</option>
-              <option value="sold_out">Sold Out</option>
+              <option value="sold_out">Sold out</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
+        </div>
+      </Card>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Image URL</label>
-            <Input
-              type="text"
-              name="imageUrl"
-              value={formData.imageUrl}
-              onChange={handleInputChange}
-              placeholder="https://..."
-            />
-          </div>
+      {/* Ticket Types */}
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold mb-4 text-foreground">Ticket Types</h2>
+        <div className="space-y-4">
+          {formData.ticketPricing.map((tp, idx) => (
+            <div key={idx} className="grid grid-cols-3 gap-2 items-center">
+              <Input
+                type="text"
+                value={tp.type}
+                onChange={(e) => handleTicketPricingChange(idx, "type", e.target.value)}
+                placeholder="Type (e.g. regular)"
+              />
+              <Input
+                type="number"
+                value={tp.price}
+                onChange={(e) => handleTicketPricingChange(idx, "price", Number(e.target.value))}
+                placeholder="Price (NGN)"
+              />
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => removeTicketType(idx)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          <Button type="button" variant="outline" size="sm" onClick={addTicketType} className="gap-2 w-full">
+            <Plus className="w-4 h-4" />
+            Add Ticket Type
+          </Button>
         </div>
       </Card>
 
