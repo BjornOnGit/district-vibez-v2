@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useConvex } from "convex/react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams, useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,10 +30,12 @@ type CartItem = {
   recipients: Recipient[]
 }
 
-export default function CheckoutPage({ params }: { params: { eventId: string } }) {
+export default function CheckoutPage() {
   const convex = useConvex()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const params = useParams()
+  const eventId = (params as any)?.eventId ?? (params as any)?.paymentId ?? searchParams?.get?.("eventId") ?? undefined
 
   const [event, setEvent] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -48,7 +50,8 @@ export default function CheckoutPage({ params }: { params: { eventId: string } }
   useEffect(() => {
     const loadEvent = async () => {
       try {
-        const eventData = await convex.query("events:getById" as any, { eventId: params.eventId })
+        if (!eventId) throw new Error("Missing event id")
+        const eventData = await convex.query("events:getById" as any, { eventId })
         setEvent(eventData)
 
         // Initialize cart from URL params if ticket type specified
@@ -63,7 +66,7 @@ export default function CheckoutPage({ params }: { params: { eventId: string } }
       }
     }
     loadEvent()
-  }, [convex, params.eventId, searchParams])
+  }, [convex, eventId, searchParams])
 
   const addToCart = (ticketType: string) => {
     setCart((prev) => {
@@ -133,7 +136,7 @@ export default function CheckoutPage({ params }: { params: { eventId: string } }
         currency: "NGN",
         user_email: buyerEmail,
         user_name: buyerName,
-        event_id: params.eventId,
+        event_id: eventId,
         tickets: cart,
       }
 
