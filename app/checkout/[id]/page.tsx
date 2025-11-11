@@ -243,7 +243,7 @@ export default function CheckoutPage() {
                 <div className="border-t pt-6">
                   <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
                   <div className="space-y-3">
-                    <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
+                    {/* <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -256,7 +256,7 @@ export default function CheckoutPage() {
                         <p className="font-semibold">Paystack</p>
                         <p className="text-sm text-muted-foreground">Pay with card or bank transfer</p>
                       </div>
-                    </label>
+                    </label> */}
 
                     <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
                       <input
