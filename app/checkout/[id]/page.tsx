@@ -67,7 +67,7 @@ export default function CheckoutPage() {
     if (match) selectedUnitPrice = match.price ?? (match.price_cents ? match.price_cents / 100 : selectedUnitPrice)
   }
 
-  const SERVICE_CHARGE = 300
+  const SERVICE_CHARGE = 50
   const subtotal = selectedUnitPrice * formData.quantity
   const totalWithService = subtotal + SERVICE_CHARGE
 
