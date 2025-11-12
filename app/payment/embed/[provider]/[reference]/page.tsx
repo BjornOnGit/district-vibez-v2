@@ -53,6 +53,10 @@ export default function EmbedPayment() {
               <a href={paymentUrl} target="_blank" rel="noreferrer noopener">
                 <Button>Open payment in new tab</Button>
               </a>
+
+              {/* Direct way for users to return to the events listing when they're done */}
+              <Button onClick={() => router.push('/events')}>Return to Events</Button>
+
               <Button variant="outline" onClick={() => router.back()}>
                 Back
               </Button>

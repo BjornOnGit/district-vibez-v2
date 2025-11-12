@@ -67,7 +67,7 @@ export default function CheckoutPage() {
     if (match) selectedUnitPrice = match.price ?? (match.price_cents ? match.price_cents / 100 : selectedUnitPrice)
   }
 
-  const SERVICE_CHARGE = 50
+  const SERVICE_CHARGE = 200
   const subtotal = selectedUnitPrice * formData.quantity
   const totalWithService = subtotal + SERVICE_CHARGE
 
@@ -243,7 +243,7 @@ export default function CheckoutPage() {
                 <div className="border-t pt-6">
                   <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
                   <div className="space-y-3">
-                    {/* <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
+                    <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -256,9 +256,9 @@ export default function CheckoutPage() {
                         <p className="font-semibold">Paystack</p>
                         <p className="text-sm text-muted-foreground">Pay with card or bank transfer</p>
                       </div>
-                    </label> */}
+                    </label>
 
-                    <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
+                    {/* <label className="flex items-center p-4 border border-input rounded-lg cursor-pointer hover:bg-muted">
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -271,7 +271,7 @@ export default function CheckoutPage() {
                         <p className="font-semibold">ZendApt</p>
                         <p className="text-sm text-muted-foreground">Pay with USDT (crypto)</p>
                       </div>
-                    </label>
+                    </label> */}
                   </div>
                 </div>
 
