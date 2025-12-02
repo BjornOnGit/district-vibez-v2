@@ -78,7 +78,7 @@ export async function sendTicketEmail({
                 
                 <div class="footer">
                   <p>If you have any questions, please contact our support team.</p>
-                  <p>&copy; 2025 Ticketing Platform. All rights reserved.</p>
+                  <p>&copy; 2025 District Vibez. All rights reserved.</p>
                 </div>
               </div>
             </div>

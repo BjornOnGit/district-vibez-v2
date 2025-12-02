@@ -1,24 +1,66 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export default function ReservationPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    ticketType: "regular",
-    guests: "1",
   })
+  const router = useRouter()
+  const [submitting, setSubmitting] = useState(false)
+  const [isFull, setIsFull] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Check reservation count on mount and redirect if full
+    const check = async () => {
+      try {
+        const res = await fetch('/api/reservations/count')
+        const data = await res.json()
+        if (data?.count >= 50) {
+          setIsFull(true)
+          router.push('/events')
+        }
+      } catch (err) {
+        console.error('[v0] reservation: failed to fetch count', err)
+      }
+    }
+    check()
+  }, [router])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Form submitted:", formData)
+    if (isFull) return router.push('/events')
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/reservations/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json()
+      if (res.status === 409 || data?.full) {
+        // Full, redirect to events
+        return router.push('/events')
+      }
+      if (res.ok) {
+        // Success - go to confirmation
+        return router.push('/reservation/thanks')
+      }
+      console.error('[v0] reservation create error', data)
+      alert(data?.error || 'Failed to create reservation')
+    } catch (err) {
+      console.error('[v0] reservation submit failed', err)
+      alert('Failed to submit reservation')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -27,7 +69,7 @@ export default function ReservationPage() {
 
       <section className="py-24">
         <div className="container mx-auto px-4 max-w-md">
-          <h1 className="text-4xl font-bold mb-12 text-center uppercase">Reserve Your Spot</h1>
+          <h1 className="text-4xl font-bold mb-12 text-center uppercase">Register To Get Your Free Ticket</h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -63,35 +105,8 @@ export default function ReservationPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Ticket Type</label>
-              <select
-                value={formData.ticketType}
-                onChange={(e) => setFormData({ ...formData, ticketType: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg bg-background"
-              >
-                <option value="regular">Regular - $75</option>
-                <option value="vip">VIP - $150</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Number of Guests</label>
-              <select
-                value={formData.guests}
-                onChange={(e) => setFormData({ ...formData, guests: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg bg-background"
-              >
-                <option value="1">1 Guest</option>
-                <option value="2">2 Guests</option>
-                <option value="3">3 Guests</option>
-                <option value="4">4 Guests</option>
-                <option value="5">5+ Guests</option>
-              </select>
-            </div>
-
             <Button type="submit" className="w-full">
-              Complete Reservation
+              Complete Registration
             </Button>
           </form>
         </div>

@@ -4,13 +4,13 @@ export function Tickets() {
   const tickets = [
     {
       name: "Regular",
-      price: "$75",
+      price: "₦5,000",
       featured: false,
       features: ["Event Entry", "Basic Refreshments", "Photo Booth Access", "Live DJ Performance"],
     },
     {
       name: "VIP",
-      price: "$150",
+      price: "₦20,000",
       featured: true,
       features: [
         "Premium Entry",

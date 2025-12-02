@@ -12,7 +12,7 @@ export default function AboutPage() {
 
           <div className="space-y-6 text-base leading-relaxed">
             <p>
-              District Vibez is an annual celebration bringing together the community for an unforgettable night of
+              District Vibez is a monthly celebration bringing together the community to the heart  of mainland Lagos for an unforgettable night of
               music, entertainment, and celebration.
             </p>
 
@@ -23,7 +23,7 @@ export default function AboutPage() {
             </p>
 
             <p>
-              From live performances to exclusive DJ sets, costume competitions to premium lounge experiences, District
+              From live performances to exclusive DJ sets, to premium lounge experiences, District
               Vibez offers something for everyone. Join us as we celebrate together!
             </p>
 
@@ -31,8 +31,6 @@ export default function AboutPage() {
               <h2 className="text-2xl font-bold mb-4">Event Highlights</h2>
               <ul className="space-y-2">
                 <li>✓ Live DJ Performances</li>
-                <li>✓ Dance Competitions</li>
-                <li>✓ Themed Photo Booth</li>
                 <li>✓ Premium Bar Service</li>
                 <li>✓ VIP Lounge Access</li>
                 <li>✓ Exclusive Entertainment</li>

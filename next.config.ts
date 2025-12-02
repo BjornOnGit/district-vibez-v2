@@ -9,11 +9,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "i.imgur.com", // Direct image links
+        hostname: "iesv8fw9sjemyab3.public.blob.vercel-storage.com", // Direct image links
       },
       {
         protocol: "https",
-        hostname: "imgur.com", // Optional: album or other Imgur assets
+        hostname: "iesv8fw9sjemyab3.public.blob.vercel-storage.com", // Optional: album or other Imgur assets
       },
     ],
   },

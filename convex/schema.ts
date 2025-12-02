@@ -81,4 +81,13 @@ export default defineSchema({
   })
     .index("by_entity", ["entityType", "entityId"])
     .index("by_timestamp", ["timestamp"]),
+
+  // Track free ticket reservations (simple table to count and audit giveaways)
+  reservations: defineTable({
+    email: v.string(),
+    name: v.string(),
+    phone: v.optional(v.string()),
+    ticketId: v.optional(v.id("tickets")),
+    createdAt: v.number(),
+  }).index("by_created", ["createdAt"]),
 })
